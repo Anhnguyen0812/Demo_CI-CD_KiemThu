@@ -96,13 +96,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: mandatory-espresso
-    if: ${{ env.SAUCE_USERNAME != '' && env.SAUCE_ACCESS_KEY != '' }}
+    env:
+      SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+      SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
 
     steps:
+      - name: Check Sauce secrets
+        id: sauce-secrets
+        shell: bash
+        run: |
+          if [[ -n "$SAUCE_USERNAME" && -n "$SAUCE_ACCESS_KEY" ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Sauce secrets are missing. Skipping Sauce cloud run."
+          fi
+
       - name: Checkout
+        if: ${{ steps.sauce-secrets.outputs.enabled == 'true' }}
         uses: actions/checkout@v4
 
       - name: Setup Java
+        if: ${{ steps.sauce-secrets.outputs.enabled == 'true' }}
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -110,20 +125,23 @@ jobs:
           cache: gradle
 
       - name: Setup Android SDK
+        if: ${{ steps.sauce-secrets.outputs.enabled == 'true' }}
         uses: android-actions/setup-android@v3
 
       - name: Build APKs for Sauce
+        if: ${{ steps.sauce-secrets.outputs.enabled == 'true' }}
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug assembleDebugAndroidTest
 
       - name: Run espresso on Sauce Labs
+        if: ${{ steps.sauce-secrets.outputs.enabled == 'true' }}
         uses: saucelabs/saucectl-run-action@v4
         with:
           concurrency: 2
 
       - name: Upload Sauce artifacts
-        if: always()
+        if: ${{ always() && steps.sauce-secrets.outputs.enabled == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: sauce-artifacts
