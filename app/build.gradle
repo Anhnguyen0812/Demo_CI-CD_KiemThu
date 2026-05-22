@@ -63,6 +63,16 @@ android {
     }
 }
 
+tasks.withType(Test).configureEach {
+    useJUnit()
+
+    // Appium host-side tests need a running Appium server and emulator/device.
+    // Keep them out of the default unit-test gate unless explicitly requested.
+    if (name.toLowerCase().contains("unittest") && !project.hasProperty("includeAppiumTests")) {
+        exclude '**/AppiumLoginTest.class'
+    }
+}
+
 configurations.all {
     resolutionStrategy {
         force 'com.google.guava:guava:33.3.0-jre'

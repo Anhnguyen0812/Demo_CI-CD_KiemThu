@@ -22,3 +22,53 @@ can be used to demo this option.
 ## Publish
 
 To publish a new version, create a release with a valid semver tag name. A CI workflow will handle setting the app version name/code and upload the APK into the release. 
+
+## CI/CD
+
+This repository now supports a split mobile CI flow on GitHub Actions:
+
+- `Android CI`: required checks for pull requests and pushes to `main`/`master`
+- `Appium Smoke`: Appium-based login smoke test on a GitHub-hosted Android emulator
+- `Publish APK`: release build on tag push
+
+### Mandatory checks
+
+The required merge gate should be the `Android CI` workflow:
+
+- `build-and-unit`: `lintDebug`, `testDebugUnitTest`, `assembleDebug`, `assembleDebugAndroidTest`
+- `mandatory-espresso`: runs instrumentation tests tagged with:
+  - `com.saucelabs.mydemoapp.android.HappyFlow`
+  - `com.saucelabs.mydemoapp.android.ErrorFlow`
+
+This keeps the PR gate focused on business-critical happy/error flows and avoids running every long-running UI test on every commit.
+
+### Appium on GitHub Actions
+
+The `Appium Smoke` workflow:
+
+- builds the debug APK
+- boots an Android emulator
+- installs Appium 2 with the `uiautomator2` driver
+- runs `AppiumLoginTest`
+
+`AppiumLoginTest` reads these environment variables:
+
+- `APPIUM_SERVER_URL`
+- `APPIUM_DEVICE_NAME`
+- `APPIUM_APP`
+
+If `APPIUM_APP` is missing, the test falls back to launching an already-installed app by package/activity.
+
+### Optional Sauce Labs cloud run
+
+If the repository defines the secrets below, the `Android CI` workflow also runs the existing Sauce Labs Espresso suite:
+
+- `SAUCE_USERNAME`
+- `SAUCE_ACCESS_KEY`
+
+### Suggested branch protection
+
+Protect `main` and require these status checks:
+
+- `Build and Unit Tests`
+- `Mandatory Android Tests`

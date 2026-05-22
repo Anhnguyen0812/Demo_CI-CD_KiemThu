@@ -1,0 +1,129 @@
+name: Android CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-unit:
+    name: Build and Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build, lint, and unit test
+        run: |
+          chmod +x gradlew
+          ./gradlew lintDebug testDebugUnitTest assembleDebug assembleDebugAndroidTest
+
+      - name: Upload unit and lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-and-lint-reports
+          path: |
+            app/build/reports/tests/
+            app/build/reports/lint-results-debug.html
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+
+  mandatory-espresso:
+    name: Mandatory Android Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: build-and-unit
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Run mandatory instrumentation tests on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          arch: x86_64
+          profile: pixel_6
+          script: |
+            chmod +x gradlew
+            ./gradlew assembleDebug assembleDebugAndroidTest
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.annotation=com.saucelabs.mydemoapp.android.HappyFlow
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.annotation=com.saucelabs.mydemoapp.android.ErrorFlow
+
+      - name: Upload instrumentation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mandatory-espresso-reports
+          path: |
+            app/build/reports/androidTests/
+            app/build/outputs/androidTest-results/
+
+  sauce-cloud:
+    name: Sauce Espresso Cloud
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: mandatory-espresso
+    if: ${{ secrets.SAUCE_USERNAME != '' && secrets.SAUCE_ACCESS_KEY != '' }}
+    env:
+      SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+      SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build APKs for Sauce
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug assembleDebugAndroidTest
+
+      - name: Run espresso on Sauce Labs
+        uses: saucelabs/saucectl-run-action@v4
+        with:
+          concurrency: 2
+
+      - name: Upload Sauce artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sauce-artifacts
+          path: artifacts/
