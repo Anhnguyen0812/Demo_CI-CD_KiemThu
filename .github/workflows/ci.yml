@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+env:
+  SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+  SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+
 jobs:
   build-and-unit:
     name: Build and Unit Tests
@@ -92,10 +96,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: mandatory-espresso
-    if: ${{ secrets.SAUCE_USERNAME != '' && secrets.SAUCE_ACCESS_KEY != '' }}
-    env:
-      SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
-      SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+    if: ${{ env.SAUCE_USERNAME != '' && env.SAUCE_ACCESS_KEY != '' }}
 
     steps:
       - name: Checkout
