@@ -28,7 +28,7 @@ public class AppiumLoginTest {
                 .setNoReset(false);
 
         String appPath = System.getenv("APPIUM_APP");
-        if (appPath != null && !appPath.isBlank()) {
+        if (!isNullOrEmpty(appPath)) {
             options.setApp(new File(appPath).getAbsolutePath());
         } else {
             options.setAppPackage(APP_ID)
@@ -62,6 +62,10 @@ public class AppiumLoginTest {
 
     private static String getEnv(String key, String fallback) {
         String value = System.getenv(key);
-        return value == null || value.isBlank() ? fallback : value;
+        return isNullOrEmpty(value) ? fallback : value;
+    }
+
+    private static boolean isNullOrEmpty(String value) {
+        return value == null || value.trim().isEmpty();
     }
 }
