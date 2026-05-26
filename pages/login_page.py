@@ -22,5 +22,16 @@ class LoginPage(BasePage):
     def submit_empty(self):
         self.click(self.LOGIN_BUTTON)
 
+    def submit_with_username_only(self, username):
+        self.type(self.USERNAME_INPUT, username)
+        self.click(self.LOGIN_BUTTON)
+
+    def submit_with_password_only(self, password):
+        self.type(self.PASSWORD_INPUT, password)
+        self.click(self.LOGIN_BUTTON)
+
     def assert_username_required(self):
         self.text_present("Username is required")
+
+    def assert_password_required(self):
+        self.text_present("Enter Password")

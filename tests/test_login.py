@@ -18,3 +18,17 @@ def test_login_empty_credentials(driver):
     login.open_from_menu()
     login.submit_empty()
     login.assert_username_required()
+
+
+def test_login_without_username(driver):
+    login = LoginPage(driver)
+    login.open_from_menu()
+    login.submit_with_password_only("10203040")
+    login.assert_username_required()
+
+
+def test_login_without_password(driver):
+    login = LoginPage(driver)
+    login.open_from_menu()
+    login.submit_with_username_only("bod@example.com")
+    login.assert_password_required()

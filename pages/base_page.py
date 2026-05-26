@@ -1,4 +1,5 @@
 from appium.webdriver.common.appiumby import AppiumBy
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 
@@ -25,3 +26,27 @@ class BasePage:
     def text_present(self, text):
         locator = (AppiumBy.XPATH, f"//*[@text='{text}']")
         return self.visible(locator)
+
+    def text_not_present(self, text, timeout=5):
+        locator = (AppiumBy.XPATH, f"//*[@text='{text}']")
+        short_wait = WebDriverWait(self.driver, timeout)
+        return short_wait.until(ec.invisibility_of_element_located(locator))
+
+    def click_text(self, text):
+        locator = (AppiumBy.XPATH, f"//*[@text='{text}']")
+        self.click(locator)
+
+    def visible_text(self, text):
+        locator = (AppiumBy.XPATH, f"//*[@text='{text}']")
+        return self.visible(locator)
+
+    def is_text_visible(self, text, timeout=3):
+        locator = (AppiumBy.XPATH, f"//*[@text='{text}']")
+        try:
+            WebDriverWait(self.driver, timeout).until(ec.visibility_of_element_located(locator))
+            return True
+        except TimeoutException:
+            return False
+
+    def get_text(self, locator):
+        return self.find(locator).text
