@@ -1,0 +1,144 @@
+name: Appium Hybrid CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    name: Build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build debug APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+
+  appium-test:
+    name: Appium Test
+    needs: build-apk
+    runs-on:
+      - self-hosted
+      - Windows
+    timeout-minutes: 40
+
+    env:
+      APPIUM_SERVER_URL: http://127.0.0.1:4723
+      APK_PATH: '${{ github.workspace }}\apps\app-debug.apk'
+      DEVICE_NAME: Android Device
+      PLATFORM_NAME: Android
+      AUTOMATION_NAME: UiAutomator2
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: android-debug-apk
+          path: apps
+
+      - name: Prepare folders
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force apps | Out-Null
+          New-Item -ItemType Directory -Force reports | Out-Null
+          New-Item -ItemType Directory -Force screenshots | Out-Null
+          New-Item -ItemType Directory -Force logs | Out-Null
+
+      - name: Verify device
+        shell: powershell
+        run: |
+          $devices = adb devices
+          $devices
+          if (-not ($devices | Select-String "`tdevice$")) {
+            throw "Khong tim thay Android device/emulator o trang thai device."
+          }
+
+      - name: Install Python dependencies
+        shell: powershell
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Start Appium Server
+        shell: powershell
+        run: |
+          $existing = Get-NetTCPConnection -LocalPort 4723 -State Listen -ErrorAction SilentlyContinue
+          if ($existing) {
+            throw "Port 4723 dang duoc su dung. Hay tat Appium process cu truoc khi chay workflow."
+          }
+
+          $process = Start-Process appium -ArgumentList "--log", "logs/appium.log", "--base-path", "/" -PassThru -WindowStyle Hidden
+          "APPIUM_PID=$($process.Id)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+          $ready = $false
+          for ($i = 0; $i -lt 15; $i++) {
+            Start-Sleep -Seconds 2
+            try {
+              $response = Invoke-WebRequest -Uri "http://127.0.0.1:4723/status" -UseBasicParsing -TimeoutSec 5
+              if ($response.StatusCode -eq 200) {
+                $ready = $true
+                break
+              }
+            } catch {
+            }
+          }
+
+          if (-not $ready) {
+            throw "Appium Server khong khoi dong kip. Xem logs/appium.log de debug."
+          }
+
+      - name: Run Appium tests
+        shell: powershell
+        run: |
+          pytest tests `
+            --junitxml=reports/junit.xml `
+            --html=reports/report.html `
+            --self-contained-html
+
+      - name: Stop Appium Server
+        if: always()
+        shell: powershell
+        run: |
+          if ($env:APPIUM_PID) {
+            Stop-Process -Id $env:APPIUM_PID -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: appium-test-artifacts
+          path: |
+            apps/app-debug.apk
+            reports/
+            screenshots/
+            logs/

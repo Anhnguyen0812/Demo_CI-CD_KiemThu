@@ -29,6 +29,7 @@ This repository now supports a split mobile CI flow on GitHub Actions:
 
 - `Android CI`: required checks for pull requests and pushes to `main`/`master`
 - `Appium Smoke`: Appium-based login smoke test on a GitHub-hosted Android emulator
+- `Appium Hybrid CI`: build APK on a GitHub-hosted runner and run Appium Python tests on a Windows self-hosted runner
 - `Publish APK`: release build on tag push
 
 ### Mandatory checks
@@ -59,6 +60,40 @@ The `Appium Smoke` workflow:
 
 If `APPIUM_APP` is missing, the test falls back to launching an already-installed app by package/activity.
 
+### Hybrid Appium CI
+
+The hybrid pipeline is implemented in `.github/workflows/appium-hybrid-ci.yml`.
+
+- `build-apk` runs on `ubuntu-latest` and uploads `app-debug.apk` as a GitHub Actions artifact.
+- `appium-test` runs on a Windows `self-hosted` runner, downloads the APK artifact, starts Appium Server locally, and runs `pytest` Appium smoke tests from `tests/`.
+- Reports, screenshots, and Appium logs are uploaded with `if: always()` so failed runs still produce demo evidence.
+
+The Python Appium suite lives in:
+
+- `tests/`: pytest test cases and fixtures
+- `pages/`: Page Object Model wrappers
+- `requirements.txt`: Python dependencies for the self-hosted runner
+
+Recommended self-hosted runner prerequisites:
+
+- JDK 17
+- Android SDK and `adb`
+- Node.js 20
+- Appium 2 + `uiautomator2` driver
+- Python 3.10 or 3.11
+
+Reference commands:
+
+```powershell
+java -version
+adb devices
+node -v
+appium -v
+appium driver list --installed
+python --version
+pytest --version
+```
+
 ### Optional Sauce Labs cloud run
 
 If the repository defines the secrets below, the `Android CI` workflow also runs the existing Sauce Labs Espresso suite:
@@ -72,3 +107,5 @@ Protect `main` and require these status checks:
 
 - `Build and Unit Tests`
 - `Mandatory Android Tests`
+- `Build APK`
+- `Appium Test`

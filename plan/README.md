@@ -1,15 +1,18 @@
 # CI/CD Plan
 
-Tài liệu trong thư mục này mô tả kiến trúc và kế hoạch triển khai CI/CD cho project Android hiện tại, tập trung vào GitHub Actions, Espresso, Appium và Sauce Labs.
+Tai lieu trong thu muc nay mo ta kien truc va ke hoach trien khai CI/CD cho project Android hien tai, tap trung vao GitHub Actions, Espresso, Appium va Sauce Labs.
 
-## Tài liệu
+## Tai lieu
 
-- `architecture.md`: kiến trúc tổng thể của pipeline
-- `implementation.md`: kế hoạch triển khai, checklist cấu hình và rollout
+- `architecture.md`: kien truc tong the cua pipeline
+- `implementation.md`: ke hoach trien khai, checklist cau hinh va rollout
+- `appium-cicd-guide.md`: huong dan tong quan cho Appium CI/CD
+- `hybrid-appium-implementation.md`: huong dan trien khai hybrid Appium voi Windows self-hosted runner
 
-## Mục tiêu
+## Muc tieu
 
-- Chuẩn hóa merge gate cho `main`/`master`
-- Tách rõ test bắt buộc và test smoke
-- Giảm flaky test trên pull request
-- Giữ khả năng mở rộng sang Sauce Labs cloud
+- Chuan hoa merge gate cho `main`/`master`
+- Tach ro test bat buoc va test smoke
+- Giam flaky test tren pull request
+- Giu kha nang mo rong sang Sauce Labs cloud
+- Co san tai lieu de demo hybrid Appium CI/CD cho bao cao cuoi ky

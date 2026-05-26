@@ -12,6 +12,7 @@ dist/
 
 # Compiled Python bytecode
 *.py[cod]
+__pycache__/
 
 # Log files
 *.log
@@ -55,6 +56,15 @@ local.properties
 build/*
 app/build/*
 
+# Appium hybrid artifacts
+apps/*
+!apps/.gitkeep
+reports/*
+!reports/.gitkeep
+screenshots/*
+!screenshots/.gitkeep
+logs/*
+!logs/.gitkeep
+
 # saucectl
 artifacts
-
