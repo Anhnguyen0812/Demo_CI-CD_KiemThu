@@ -52,6 +52,9 @@ jobs:
           api-level: 31
           arch: x86_64
           profile: pixel_6
+          emulator-boot-timeout: 900
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
             adb wait-for-device
             appium --base-path /wd/hub > appium.log 2>&1 &

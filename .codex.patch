@@ -1,0 +1,33 @@
+*** Begin Patch
+*** Update File: .github/workflows/ci.yml
+@@
+       - name: Run mandatory instrumentation tests on emulator
+         uses: reactivecircus/android-emulator-runner@v2
+         with:
+           api-level: 31
+           arch: x86_64
+           profile: pixel_6
++          emulator-boot-timeout: 900
++          disable-animations: true
++          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+           script: |
+             chmod +x gradlew
+             ./gradlew assembleDebug assembleDebugAndroidTest
+             ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.annotation=com.saucelabs.mydemoapp.android.HappyFlow
+             ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.annotation=com.saucelabs.mydemoapp.android.ErrorFlow
+*** Update File: .github/workflows/appium-smoke.yml
+@@
+       - name: Run Appium smoke test
+         uses: reactivecircus/android-emulator-runner@v2
+         with:
+           api-level: 31
+           arch: x86_64
+           profile: pixel_6
++          emulator-boot-timeout: 900
++          disable-animations: true
++          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+           script: |
+             adb wait-for-device
+             appium --base-path /wd/hub > appium.log 2>&1 &
+             ./gradlew testDebugUnitTest -PincludeAppiumTests=true --tests com.saucelabs.mydemoapp.android.AppiumLoginTest
+*** End Patch
