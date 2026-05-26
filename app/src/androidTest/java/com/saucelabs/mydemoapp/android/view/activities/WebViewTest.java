@@ -35,8 +35,8 @@ public class WebViewTest extends BaseTest {
     String url;
 
     @Rule
-    public ActivityScenarioRule<SplashActivity> activityRule
-            = new ActivityScenarioRule<>(SplashActivity.class);
+    public ActivityScenarioRule<MainActivity> activityRule
+            = new ActivityScenarioRule<>(MainActivity.class);
 
     @Before
     public void setUp(){
@@ -88,3 +88,4 @@ public class WebViewTest extends BaseTest {
         onView(withText("Please provide a correct https url.")).check(doesNotExist());
     }
 }
+

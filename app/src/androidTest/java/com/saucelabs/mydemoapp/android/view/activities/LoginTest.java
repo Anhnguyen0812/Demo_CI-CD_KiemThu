@@ -35,7 +35,7 @@ public class LoginTest extends BaseTest {
     private final ViewAction scroll = new NestingAwareScrollAction();
 
     @Rule
-    public ActivityScenarioRule<SplashActivity> activityRule = new ActivityScenarioRule<>(SplashActivity.class);
+    public ActivityScenarioRule<MainActivity> activityRule = new ActivityScenarioRule<>(MainActivity.class);
 
     @Before
     public void removeLogin() {
@@ -166,3 +166,4 @@ public class LoginTest extends BaseTest {
         onView(withId(R.id.menuIV)).check(matches(isDisplayed()));
     }
 }
+

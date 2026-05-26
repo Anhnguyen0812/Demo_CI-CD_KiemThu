@@ -33,7 +33,7 @@ public class DashboardToCheckout extends BaseTest {
     private final ViewAction scroll = new NestingAwareScrollAction();
 
     @Rule
-    public ActivityScenarioRule<SplashActivity> activityRule = new ActivityScenarioRule<>(SplashActivity.class);
+    public ActivityScenarioRule<MainActivity> activityRule = new ActivityScenarioRule<>(MainActivity.class);
 
     @Before
     public void setUp(){
@@ -185,3 +185,4 @@ public class DashboardToCheckout extends BaseTest {
                 .check(matches(isDisplayed()));
     }
 }
+
