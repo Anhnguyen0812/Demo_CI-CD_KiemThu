@@ -1,9 +1,15 @@
 import os
+import sys
 from datetime import datetime
 
 import pytest
 from appium import webdriver
 from appium.options.android import UiAutomator2Options
+
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
 
 
 def pytest_configure(config):
