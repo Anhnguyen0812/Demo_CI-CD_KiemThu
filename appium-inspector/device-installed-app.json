@@ -1,0 +1,12 @@
+{
+  "platformName": "Android",
+  "appium:automationName": "UiAutomator2",
+  "appium:deviceName": "LMV6001868dd95",
+  "appium:udid": "LMV6001868dd95",
+  "appium:appPackage": "com.saucelabs.mydemoapp.android",
+  "appium:appActivity": "com.saucelabs.mydemoapp.android.view.activities.SplashActivity",
+  "appium:appWaitActivity": "com.saucelabs.mydemoapp.android.view.activities.*",
+  "appium:noReset": true,
+  "appium:autoGrantPermissions": true,
+  "appium:newCommandTimeout": 120
+}
