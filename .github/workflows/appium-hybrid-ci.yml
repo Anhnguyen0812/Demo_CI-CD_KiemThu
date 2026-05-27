@@ -1,0 +1,202 @@
+name: Appium Hybrid CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: appium-hybrid-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    name: Build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build debug APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+
+  appium-test:
+    name: Appium Test
+    needs: build-apk
+    runs-on:
+      - self-hosted
+      - Windows
+    timeout-minutes: 40
+
+    env:
+      APPIUM_SERVER_URL: http://127.0.0.1:4723
+      APK_PATH: '${{ github.workspace }}\apps\app-debug.apk'
+      DEVICE_NAME: Android Device
+      PLATFORM_NAME: Android
+      AUTOMATION_NAME: UiAutomator2
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: android-debug-apk
+          path: apps
+
+      - name: Prepare folders
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force apps | Out-Null
+          New-Item -ItemType Directory -Force reports | Out-Null
+          New-Item -ItemType Directory -Force screenshots | Out-Null
+          New-Item -ItemType Directory -Force logs | Out-Null
+
+      - name: Verify device
+        shell: powershell
+        run: |
+          $devices = adb devices
+          $devices
+          if (-not ($devices | Select-String "`tdevice$")) {
+            throw "Khong tim thay Android device/emulator o trang thai device."
+          }
+
+      - name: Verify toolchain
+        shell: powershell
+        run: |
+          python --version
+          $appiumCmd = Get-Command appium.cmd -ErrorAction SilentlyContinue
+          if (-not $appiumCmd) {
+            $appiumCmd = Get-Command appium -ErrorAction SilentlyContinue
+          }
+          if (-not $appiumCmd) {
+            throw "Khong tim thay appium trong PATH cua self-hosted runner."
+          }
+          $appiumCmd.Path
+          & $appiumCmd.Path -v
+          & $appiumCmd.Path driver list --installed
+
+      - name: Install Python dependencies if needed
+        shell: powershell
+        run: |
+          $requirements = Get-Content requirements.txt | Where-Object { $_ -and -not $_.StartsWith('#') }
+          $needInstall = $false
+
+          foreach ($requirement in $requirements) {
+            $parts = $requirement -split '==', 2
+            $packageName = $parts[0].Trim()
+            $requiredVersion = $parts[1].Trim()
+            $showOutput = python -m pip show $packageName 2>$null
+
+            if (-not $showOutput) {
+              Write-Host "Missing package: $packageName"
+              $needInstall = $true
+              break
+            }
+
+            $versionLine = $showOutput | Select-String '^Version:' | Select-Object -First 1
+            $installedVersion = if ($versionLine) { $versionLine.ToString().Split(':')[1].Trim() } else { '' }
+
+            if ($installedVersion -ne $requiredVersion) {
+              Write-Host "Package $packageName version mismatch. Installed=$installedVersion Required=$requiredVersion"
+              $needInstall = $true
+              break
+            }
+          }
+
+          if ($needInstall) {
+            python -m pip install --upgrade pip
+            python -m pip install -r requirements.txt
+          } else {
+            Write-Host "Python dependencies already satisfy requirements.txt. Skipping pip install."
+          }
+
+          pytest --version
+
+      - name: Start Appium Server
+        shell: powershell
+        run: |
+          $existing = Get-NetTCPConnection -LocalPort 4723 -State Listen -ErrorAction SilentlyContinue
+          if ($existing) {
+            throw "Port 4723 dang duoc su dung. Hay tat Appium process cu truoc khi chay workflow."
+          }
+
+          $appiumCmd = Get-Command appium.cmd -ErrorAction SilentlyContinue
+          if (-not $appiumCmd) {
+            $appiumCmd = Get-Command appium -ErrorAction SilentlyContinue
+          }
+          if (-not $appiumCmd) {
+            throw "Khong tim thay appium executable trong PATH."
+          }
+
+          $process = Start-Process -FilePath $appiumCmd.Path -ArgumentList "--log", "logs/appium.log", "--base-path", "/" -PassThru -WindowStyle Hidden
+          "APPIUM_PID=$($process.Id)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+          $ready = $false
+          for ($i = 0; $i -lt 15; $i++) {
+            Start-Sleep -Seconds 2
+            try {
+              $response = Invoke-WebRequest -Uri "http://127.0.0.1:4723/status" -UseBasicParsing -TimeoutSec 5
+              if ($response.StatusCode -eq 200) {
+                $ready = $true
+                break
+              }
+            } catch {
+            }
+          }
+
+          if (-not $ready) {
+            throw "Appium Server khong khoi dong kip. Xem logs/appium.log de debug."
+          }
+
+      - name: Run Appium tests
+        shell: powershell
+        run: |
+          pytest tests `
+            --junitxml=reports/junit.xml `
+            --html=reports/report.html `
+            --self-contained-html
+
+      - name: Stop Appium Server
+        if: always()
+        shell: powershell
+        run: |
+          if ($env:APPIUM_PID) {
+            Stop-Process -Id $env:APPIUM_PID -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: appium-test-artifacts
+          path: |
+            apps/app-debug.apk
+            reports/
+            screenshots/
+            logs/

@@ -1,49 +1,56 @@
 package com.saucelabs.mydemoapp.android;
+
 import io.appium.java_client.AppiumBy;
 import io.appium.java_client.android.AndroidDriver;
 import io.appium.java_client.android.options.UiAutomator2Options;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Duration;
 
 public class AppiumLoginTest {
-    public AndroidDriver driver;
+    private static final String APP_ID = "com.saucelabs.mydemoapp.android";
+
+    private AndroidDriver driver;
 
     @Before
     public void setUp() throws MalformedURLException {
         UiAutomator2Options options = new UiAutomator2Options()
-                .setDeviceName("LMV6001868dd95") // Thay bằng ID từ lệnh adb devices
-                .setAppPackage("com.saucelabs.mydemoapp.android")
-                .setAppActivity("com.saucelabs.mydemoapp.android.view.activities.MainActivity")
-                .setNoReset(true);
+                .setPlatformName("Android")
+                .setAutomationName("UiAutomator2")
+                .setDeviceName(getEnv("APPIUM_DEVICE_NAME", "Android Emulator"))
+                .setAppWaitActivity(APP_ID + ".view.activities.*")
+                .setNoReset(false);
 
-        driver = new AndroidDriver(new URL("http://127.0.0.1:4723"), options);
+        String appPath = System.getenv("APPIUM_APP");
+        if (!isNullOrEmpty(appPath)) {
+            options.setApp(new File(appPath).getAbsolutePath());
+        } else {
+            options.setAppPackage(APP_ID)
+                    .setAppActivity(APP_ID + ".view.activities.SplashActivity");
+        }
+
+        driver = new AndroidDriver(
+                new URL(getEnv("APPIUM_SERVER_URL", "http://127.0.0.1:4723/wd/hub")),
+                options
+        );
         driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
     }
 
     @Test
     public void loginFlow() {
-        // 1. Nhấn vào biểu tượng Menu (Hamburger icon)
         driver.findElement(AppiumBy.accessibilityId("View menu")).click();
-
-        // 2. Nhấn vào dòng chữ "Log In" trong menu sidebar
-        // Lưu ý: Dùng XPath để tìm chính xác phần tử có thuộc tính text là Log In
         driver.findElement(AppiumBy.xpath("//android.widget.TextView[@content-desc=\"Login Menu Item\"]")).click();
-
-        // 3. Nhập Username (ID này soi từ Appium Inspector)
-        driver.findElement(AppiumBy.id("com.saucelabs.mydemoapp.android:id/nameET")).sendKeys("bob@example.com");
-
-        // 4. Nhập Password
-        driver.findElement(AppiumBy.id("com.saucelabs.mydemoapp.android:id/passwordET")).sendKeys("10203040");
-
-        // 5. Nhấn nút Login
+        driver.findElement(AppiumBy.id(APP_ID + ":id/nameET")).sendKeys("bob@example.com");
+        driver.findElement(AppiumBy.id(APP_ID + ":id/passwordET")).sendKeys("10203040");
         driver.findElement(AppiumBy.accessibilityId("Tap to login with given credentials")).click();
 
-        // Đợi 2 giây để quan sát kết quả
-        try { Thread.sleep(2000); } catch (InterruptedException e) { e.printStackTrace(); }
+        Assert.assertTrue(driver.findElement(AppiumBy.id(APP_ID + ":id/productRV")).isDisplayed());
     }
 
     @After
@@ -51,5 +58,14 @@ public class AppiumLoginTest {
         if (driver != null) {
             driver.quit();
         }
+    }
+
+    private static String getEnv(String key, String fallback) {
+        String value = System.getenv(key);
+        return isNullOrEmpty(value) ? fallback : value;
+    }
+
+    private static boolean isNullOrEmpty(String value) {
+        return value == null || value.trim().isEmpty();
     }
 }

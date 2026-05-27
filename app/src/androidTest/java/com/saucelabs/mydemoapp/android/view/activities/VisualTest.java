@@ -44,7 +44,7 @@ public class VisualTest extends BaseTest {
     private final ViewAction scroll = new NestingAwareScrollAction();
 
     @Rule
-    public ActivityScenarioRule<SplashActivity> activityRule = new ActivityScenarioRule<>(SplashActivity.class);
+    public ActivityScenarioRule<MainActivity> activityRule = new ActivityScenarioRule<>(MainActivity.class);
 
     @Rule
     public TestMetaInfoRule testMetaInfoRule = new TestMetaInfoRule();
@@ -119,3 +119,4 @@ public class VisualTest extends BaseTest {
         client.finish();
     }
 }
+
