@@ -8,7 +8,7 @@ def test_login_success(driver):
 
     login = LoginPage(driver)
     login.open_from_menu()
-    login.login("bob@example.com", "10203040")
+    login.login("bob@example.com", "wrong-password")
 
     catalog.assert_loaded()
 
