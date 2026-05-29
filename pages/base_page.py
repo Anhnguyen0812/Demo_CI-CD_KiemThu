@@ -50,3 +50,17 @@ class BasePage:
 
     def get_text(self, locator):
         return self.find(locator).text
+
+    def scroll_to_text(self, text):
+        ui_selector = (
+            'new UiScrollable(new UiSelector().scrollable(true).instance(0))'
+            f'.scrollIntoView(new UiSelector().text("{text}").instance(0));'
+        )
+        return self.driver.find_element(AppiumBy.ANDROID_UIAUTOMATOR, ui_selector)
+
+    def scroll_to_description(self, description):
+        ui_selector = (
+            'new UiScrollable(new UiSelector().scrollable(true).instance(0))'
+            f'.scrollIntoView(new UiSelector().description("{description}").instance(0));'
+        )
+        return self.driver.find_element(AppiumBy.ANDROID_UIAUTOMATOR, ui_selector)
